@@ -18,6 +18,7 @@ from models.detector import CarDefectDetector
 from utils.image_processor import ImageProcessor
 from utils.visualizer import DetectionVisualizer
 from utils.car_classifier import CarClassifier
+from utils.final_car_analyzer import FinalCarAnalyzer
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,7 @@ detector = CarDefectDetector()
 image_processor = ImageProcessor()
 visualizer = DetectionVisualizer()
 classifier = CarClassifier()
+final_analyzer = FinalCarAnalyzer()
 
 @app.get("/")
 async def root():
@@ -93,7 +95,10 @@ async def detect_defects(file: UploadFile = File(...)):
             confidence_threshold=0.3
         )
         
-        # Классификация автомобиля по чистоте и целостности
+        # Финальный анализ состояния автомобиля
+        final_analysis = final_analyzer.analyze_car_condition(image_cv)
+        
+        # Классификация автомобиля по чистоте и целостности (для совместимости)
         classification = classifier.classify_car(image_cv, detections)
         
         # Подготавливаем ответ
@@ -104,6 +109,7 @@ async def detect_defects(file: UploadFile = File(...)):
             "total_defects": len(detections),
             "defect_types": list(set([d["class"] for d in detections])),
             "classification": classification,
+            "final_analysis": final_analysis,
             "image_size": {
                 "width": image_cv.shape[1],
                 "height": image_cv.shape[0]
@@ -144,7 +150,10 @@ async def detect_defects_json(file: UploadFile = File(...)):
         # Детекция
         detections = detector.detect(processed_image)
         
-        # Классификация автомобиля по чистоте и целостности
+        # Финальный анализ состояния автомобиля
+        final_analysis = final_analyzer.analyze_car_condition(image_cv)
+        
+        # Классификация автомобиля по чистоте и целостности (для совместимости)
         classification = classifier.classify_car(image_cv, detections)
         
         return {
@@ -157,7 +166,8 @@ async def detect_defects_json(file: UploadFile = File(...)):
                 "width": image_cv.shape[1],
                 "height": image_cv.shape[0]
             },
-            "classification": classification
+            "classification": classification,
+            "final_analysis": final_analysis
         }
         
     except Exception as e:

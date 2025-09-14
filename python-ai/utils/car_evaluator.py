@@ -256,3 +256,5 @@ class CarEvaluator:
             advice_parts.append("• Учет затрат на устранение дефектов")
         
         return "\n".join(advice_parts)
+
+

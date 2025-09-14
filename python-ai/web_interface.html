@@ -338,16 +338,106 @@
             background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, #27ae60 100%);
             transition: width 0.3s ease;
         }
+
+        .role-selector {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .role-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .role-btn {
+            padding: 15px 30px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .role-btn:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .role-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .message-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .message-section.show {
+            display: block;
+        }
+
+        .message-emoji {
+            font-size: 4em;
+            margin: 20px 0;
+        }
+
+        .message-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .message-details {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+
+        .condition-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            margin: 10px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚗 Car Classification AI</h1>
-            <p>Классификация автомобилей по чистоте и целостности</p>
+            <h1>🚗 AI Проверка Водителей</h1>
+            <p>Проверка состояния автомобиля для водителей и пассажиров</p>
         </div>
         
         <div class="content">
+            <!-- Выбор роли -->
+            <div class="role-selector">
+                <h3>👤 Выберите вашу роль</h3>
+                <div class="role-buttons">
+                    <button class="role-btn active" id="driverBtn" onclick="selectRole('driver')">
+                        🚗 Водитель
+                    </button>
+                    <button class="role-btn" id="passengerBtn" onclick="selectRole('passenger')">
+                        👥 Пассажир
+                    </button>
+                </div>
+            </div>
+
             <div class="upload-section" id="uploadSection">
                 <h3>📁 Загрузите изображение автомобиля</h3>
                 <p>Поддерживаемые форматы: JPEG, PNG, WEBP (максимум 10MB)</p>
@@ -357,7 +447,7 @@
                     Выбрать файл
                 </button>
                 <button class="analyze-btn" id="analyzeBtn" onclick="analyzeImage()" disabled>
-                    🔍 Анализировать
+                    🔍 Проверить машину
                 </button>
                 
                 <div class="image-preview" id="imagePreview"></div>
@@ -371,11 +461,17 @@
             <div class="error" id="error"></div>
             
             <div class="results" id="results">
-                <h3>📊 Результаты классификации</h3>
-                
+                <!-- Сообщение для выбранной роли -->
+                <div class="message-section" id="messageSection">
+                    <div class="message-emoji" id="messageEmoji">🚗</div>
+                    <div class="message-title" id="messageTitle">Проверяем вашу машину...</div>
+                    <div class="message-details" id="messageDetails">Анализируем состояние автомобиля</div>
+                    <div class="condition-badge" id="conditionBadge">Чистая + Целая</div>
+                </div>
+
                 <!-- Секция классификации -->
                 <div class="classification-section" id="classificationSection" style="display: none;">
-                    <h2>🎯 Классификация автомобиля</h2>
+                    <h2>🎯 Состояние автомобиля</h2>
                     
                     <div class="classification-grid">
                         <!-- Чистота -->
@@ -394,18 +490,6 @@
                             <div id="integrityDescription">Описание целостности</div>
                         </div>
                     </div>
-                    
-                    <!-- Общая оценка -->
-                    <div class="overall-score" id="overallScore">0%</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <!-- Рекомендация -->
-                <div class="recommendation" id="recommendationSection" style="display: none;">
-                    <div class="recommendation-title" id="recommendationTitle">Рекомендация</div>
-                    <div class="recommendation-details" id="recommendationDetails">Детали рекомендации</div>
                 </div>
 
                 <div class="stats" id="stats"></div>
@@ -416,6 +500,8 @@
 
     <script>
         let selectedFile = null;
+        let selectedRole = 'driver'; // По умолчанию водитель
+        
         const fileInput = document.getElementById('fileInput');
         const uploadSection = document.getElementById('uploadSection');
         const imagePreview = document.getElementById('imagePreview');
@@ -426,6 +512,13 @@
         const stats = document.getElementById('stats');
         const defectsList = document.getElementById('defectsList');
         
+        // Элементы сообщений
+        const messageSection = document.getElementById('messageSection');
+        const messageEmoji = document.getElementById('messageEmoji');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageDetails = document.getElementById('messageDetails');
+        const conditionBadge = document.getElementById('conditionBadge');
+        
         // Элементы классификации
         const classificationSection = document.getElementById('classificationSection');
         const cleanlinessLevel = document.getElementById('cleanlinessLevel');
@@ -434,11 +527,27 @@
         const integrityLevel = document.getElementById('integrityLevel');
         const integrityScore = document.getElementById('integrityScore');
         const integrityDescription = document.getElementById('integrityDescription');
-        const overallScore = document.getElementById('overallScore');
-        const progressFill = document.getElementById('progressFill');
-        const recommendationSection = document.getElementById('recommendationSection');
-        const recommendationTitle = document.getElementById('recommendationTitle');
-        const recommendationDetails = document.getElementById('recommendationDetails');
+
+        // Функция выбора роли
+        function selectRole(role) {
+            selectedRole = role;
+            
+            // Обновляем кнопки
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (role === 'driver') {
+                document.getElementById('driverBtn').classList.add('active');
+            } else {
+                document.getElementById('passengerBtn').classList.add('active');
+            }
+            
+            // Обновляем сообщение, если уже есть результаты
+            if (selectedFile) {
+                // Можно переанализировать или просто обновить сообщение
+            }
+        }
 
         // Обработка выбора файла
         fileInput.addEventListener('change', function(e) {
@@ -523,8 +632,11 @@
                 return;
             }
 
-            // Показываем классификацию, если есть данные
-            if (data.classification) {
+            // Показываем сообщение для выбранной роли
+            if (data.final_analysis) {
+                showFinalAnalysis(data.final_analysis);
+            } else if (data.classification) {
+                showRoleMessage(data.classification);
                 showClassification(data.classification);
             }
 
@@ -560,6 +672,97 @@
             results.classList.add('show');
         }
 
+        function showFinalAnalysis(analysis) {
+            // Показываем секцию сообщений
+            messageSection.classList.add('show');
+            
+            // Получаем сообщение для выбранной роли
+            const recommendation = analysis.recommendation || {};
+            const roleMessage = selectedRole === 'driver' ? recommendation.driver : recommendation.passenger;
+            
+            if (roleMessage) {
+                messageEmoji.textContent = roleMessage.emoji || '🚗';
+                messageTitle.textContent = roleMessage.message || 'Проверка завершена';
+                messageDetails.textContent = roleMessage.details || 'Анализ состояния автомобиля';
+            }
+            
+            // Обновляем бейдж состояния
+            const condition = analysis.overall_condition?.condition || 'Не определено';
+            const score = analysis.overall_condition?.score || 0;
+            conditionBadge.textContent = `${condition} (${(score * 100).toFixed(1)}%)`;
+            
+            // Показываем детальную информацию о дефектах
+            showDetailedDefects(analysis);
+        }
+
+        function showDetailedDefects(analysis) {
+            // Обновляем статистику с детальной информацией
+            const rust = analysis.rust || {};
+            const scratches = analysis.scratches || {};
+            const dents = analysis.dents || {};
+            const cracks = analysis.cracks || {};
+            const cleanliness = analysis.cleanliness || {};
+            
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${(rust.percentage || 0).toFixed(1)}%</div>
+                    <div class="stat-label">Ржавчина</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(scratches.percentage || 0).toFixed(1)}%</div>
+                    <div class="stat-label">Царапины</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(dents.percentage || 0).toFixed(1)}%</div>
+                    <div class="stat-label">Вмятины</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(cracks.percentage || 0).toFixed(1)}%</div>
+                    <div class="stat-label">Трещины</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(cleanliness.score * 100 || 0).toFixed(1)}%</div>
+                    <div class="stat-label">Чистота</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(analysis.overall_condition?.score * 100 || 0).toFixed(1)}%</div>
+                    <div class="stat-label">Общая оценка</div>
+                </div>
+            `;
+            
+            // Показываем детальные описания дефектов
+            const defects = [];
+            if (rust.detected) defects.push(`🦠 Ржавчина: ${rust.description}`);
+            if (scratches.detected) defects.push(`✏️ Царапины: ${scratches.description}`);
+            if (dents.detected) defects.push(`🔨 Вмятины: ${dents.description}`);
+            if (cracks.detected) defects.push(`💥 Трещины: ${cracks.description}`);
+            
+            defectsList.innerHTML = defects.map(defect => `
+                <div class="defect-item">
+                    <div class="defect-type">${defect}</div>
+                </div>
+            `).join('');
+        }
+
+        function showRoleMessage(classification) {
+            // Показываем секцию сообщений
+            messageSection.classList.add('show');
+            
+            // Получаем сообщение для выбранной роли
+            const recommendation = classification.recommendation || {};
+            const roleMessage = selectedRole === 'driver' ? recommendation.driver : recommendation.passenger;
+            
+            if (roleMessage) {
+                messageEmoji.textContent = roleMessage.emoji || '🚗';
+                messageTitle.textContent = roleMessage.message || 'Проверка завершена';
+                messageDetails.textContent = roleMessage.details || 'Анализ состояния автомобиля';
+            }
+            
+            // Обновляем бейдж состояния
+            const condition = classification.recommendation?.overall_condition || 'Не определено';
+            conditionBadge.textContent = condition;
+        }
+
         function showClassification(classification) {
             // Показываем секцию классификации
             classificationSection.style.display = 'block';
@@ -583,18 +786,6 @@
             integrityLevel.className = `classification-level integrity-${integrityLevelValue}`;
             integrityScore.textContent = (integrityScoreValue * 100).toFixed(1) + '%';
             integrityDescription.textContent = integrity.description || '';
-            
-            // Обновляем общую оценку
-            const overallScoreValue = classification.overall_score || 0;
-            overallScore.textContent = (overallScoreValue * 100).toFixed(1) + '%';
-            progressFill.style.width = (overallScoreValue * 100) + '%';
-            
-            // Показываем рекомендацию
-            const recommendation = classification.recommendation || {};
-            recommendationSection.style.display = 'block';
-            recommendationTitle.textContent = recommendation.message || 'Рекомендация';
-            recommendationDetails.textContent = recommendation.details || '';
-            recommendationSection.className = `recommendation ${recommendation.buy ? 'buy' : 'no-buy'}`;
         }
 
         function getCleanlinessName(level) {
